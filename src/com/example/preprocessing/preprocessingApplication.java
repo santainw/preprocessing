@@ -8,11 +8,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 public class preprocessingApplication {
 
-	public static String sourcePath = "F:\\CT\\Spring\\tutorial\\preprocessing\\source";
-	public static String resultPath = "F:\\CT\\Spring\\tutorial\\preprocessing\\result/";
+	public static String sourcePath = "source/";
+	public static String resultPath = "result/";
 	
 
 	public static String relation = "Grocery_and_Gourmet_Food_5";
@@ -22,10 +23,11 @@ public class preprocessingApplication {
 	public static String supervised_attribute = "summary_review,emotional";
 	public static String supervised_positive = "good,best,nice,great,yum,happy,okay,love,like,high,perfect,awesome";
 	public static String supervised_negative = "bad,not,but,no,not fresh,low";
-	public static String filePositive = "F:\\CT\\Spring\\tutorial\\preprocessing\\pos_neg/Lexicon-Positive.txt";
-	public static String fileNegative = "F:\\CT\\Spring\\tutorial\\preprocessing\\pos_neg/Lexicon-Negative.txt";
+	public static String filePositive = "pos_neg/Lexicon-Positive.txt";
+	public static String fileNegative = "pos_neg/Lexicon-Negative.txt";
 	
-	public static String json_requirment_key = "summary";
+//	public static String json_requirment_key = "summary";
+	public static String json_requirment_key = "reviewText";
 	
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
@@ -77,7 +79,7 @@ public class preprocessingApplication {
 
 				if (fileChild.isFile()) {
 					System.out.println("File name : " + fileChild.getName());
-					result = readJsonFile(fileChild);
+					result = readJsonFile(fileChild, 0);
 					for (int i = 0; i < result.length; i++) {
 						System.out.println(result[i].trim());
 						dataAffr.append("'" + result[i].trim() + "'" + "\n");
@@ -116,51 +118,124 @@ public class preprocessingApplication {
 //		positiveInstruction = supervised_positive.split(",");
 //		negativeInstruction = supervised_negative.split(",");
 		File aDirectoryPos = new File(filePositive);
-		positiveInstruction = readFileConv(aDirectoryPos).split(",");
+		positiveInstruction = readFileConv(aDirectoryPos).trim().substring(1).split(",");
 		File aDirectoryNeg = new File(fileNegative);
-		negativeInstruction = readFileConv(aDirectoryNeg).split(",");
-		dataAffr.append("@relation " + relation + "\n");
-		for(String str : supervised_attribute.split(",")) {
-			dataAffr.append("@attribute " + str + " numberic\n");
-		}
+		negativeInstruction = readFileConv(aDirectoryNeg).trim().substring(1).split(",");
 		
-		dataAffr.append("@data" + "\n");
 
+		
 		if (filesInDir != null) {
 			for (File fileChild : filesInDir) {
 
 				if (fileChild.isFile()) {
 					System.out.println("File name : " + fileChild.getName());
-					result = readJsonFile(fileChild);
-//					result = new String[5];
-//					result[0] = "can't";
-//					result[1] = "bad i'm fine";
-//					result[2] = "nice";
-//					result[3] = "can't";
+					if(fileChild.getName().equals(".DS_Store")) {
+						continue;
+					}
+					int maxLength = maxLengthFromJson(fileChild);
+
+					result = readJsonFile(fileChild, maxLength);
+					ArrayList<String[]> supAry = new ArrayList<String[]>();
+					for(String data: result) {
+						if(data!="") {
+							String[] child = new String[data.split(",").length];
+							child = data.split(",");
+							supAry.add(child);
+						}
+	
+					}
+					System.out.println("Analysis");
 					int emo;
-					for(String str: result) {
-						emo = 0;
-						String[] strAry = new String[str.split(" ").length];
-						strAry = str.split(" ");
-						for(String word: strAry) {
+					dataAffr.append("@relation " + relation + "\n");
+					for(int i = 1; i<= maxLength; i++) {
+						dataAffr.append("@attribute " + "x"+i+ " numeric\n");
+					}
+						
+					dataAffr.append("@data" + "\n");
+					supAry.remove(0);
+					for(int i =0;i<supAry.size();i++) {
+						outer1loop:for(int a = 0;a<supAry.get(i).length;a++) {
+							emo = 0;
 							for(String pos : positiveInstruction) {
-								if(word.contains(pos)) {
-//									dataAffr.append("'" + result[i].trim().replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "") + "'" + ",positive" + "\n");
-//									continue outerloop;
+								if(supAry.get(i)[a].toLowerCase().contains(pos.toLowerCase())) {
 									emo++;
+									supAry.get(i)[a]=String.valueOf(emo);
+									continue outer1loop;
+									
 								}
 							}
 							for(String neg : negativeInstruction) {
-								if(word.contains(neg)) {
-//									dataAffr.append("'" + result[i].trim().replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "") + "'" + ",negative" + "\n");
-//									continue outerloop;
+								if(supAry.get(i)[a].toLowerCase().contains(neg.toLowerCase())) {
 									emo--;
+									supAry.get(i)[a]=String.valueOf(emo);
+									continue outer1loop;
+									
 								}
 							}
+							supAry.get(i)[a]="0";
+							
 						}
-						System.out.println(emo);
-						dataAffr.append("'" + str.trim().replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "") + "'" + ","+ emo + "\n");
+						
+						
+					}
+					
+					emo = 0;
+					outerloop:for(String[] str: supAry) {
+						String newstr = "";
+						for(String st : str) {
+//							newstr = newstr+","+"'"+st.replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "")+"'";
+							newstr = newstr+","+st.replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "");
 
+						}
+						newstr =  newstr.substring(1);
+						String[] strAry = new String[newstr.split(",").length];
+						strAry = newstr.split(",");
+						int sum = 0;
+						for(String word: strAry) {
+							int compare = !word.isEmpty()?Integer.valueOf(word): 0;
+							if(compare>0) {
+								sum++;
+							}
+							if(compare<0) {
+								sum--;
+							}
+						}
+						if(sum>0) {
+							dataAffr.append(newstr.trim()+ ",positive" + "\n");
+						}
+						else if(sum<0) {
+							dataAffr.append(newstr.trim()+ ",negative" + "\n");
+						}
+						else {
+							dataAffr.append(newstr.trim()+ ",neural" + "\n");
+						}
+//						for(String word: strAry) {
+//							for(String pos : positiveInstruction) {
+//								if(word.toLowerCase().contains(pos.toLowerCase())) {
+//									dataAffr.append(newstr.trim()+ ",positive" + "\n");
+//									emo++;
+//						
+//						continue outerloop;
+//									
+//								}
+//							}
+//							for(String neg : negativeInstruction) {
+//								if(word.toLowerCase().contains(neg.toLowerCase())) {
+//									dataAffr.append(newstr.trim()+ ",negative" + "\n");
+//									emo--;
+//									continue outerloop;
+//									
+//								}
+//							}
+//						}
+						
+//						if(emo>0) {
+//							dataAffr.append("postive");
+//						}else if(emo==0) {
+//							dataAffr.append("neural");
+//						}else {
+//							dataAffr.append("negative");
+//						}
 					}
 //					outerloop:for (int i = 0; i < result.length; i++) {
 //						System.out.println(result[i].trim());
@@ -179,6 +254,7 @@ public class preprocessingApplication {
 //						dataAffr.append("'" + result[i].trim().replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "") + "'" + ",neutral" +"\n");
 //					}
 					createFile(fileChild.getName(), dataAffr.toString());
+					System.out.println("Created file");
 				}
 			}
 		}
@@ -228,29 +304,101 @@ public class preprocessingApplication {
 		}
 		return null;
 	}
-	public static String[] readJsonFile(File file) {
+	public static int maxLengthFromJson(File file) {
+		if(file.getName().contains("DS")) {
+			return 0;
+		}
 		String totalMsg = "";
 		String[] preStrAry = null;
 		String preStr = "";
+		int maxLength = 0;
+		int initLength = 0;
 		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 			int lineAt = 0;
+			System.out.println("Exctract json");
 			for (String line; (line = br.readLine()) != null;) {
 				lineAt++;
 				if (line.contains("\"" + json_requirment_key + "\"")) {
 //					System.out.println(line.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length())
 //							.split("\"")[3]);
 					
-//					preStr = line
-//							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3];
-//					preStrAry = new String[preStr.split(" ").length];
-//					preStrAry = preStr.split(" ");
-//					for(String str: preStrAry) {
-//						System.out.println(str);
-//						totalMsg = totalMsg + "@!" + str;
-//					}
-					
-					totalMsg = totalMsg + "@!" + line
+					preStr = line
 							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3];
+					ArrayList<String> arry = new ArrayList<String>();
+					for(String st: preStr.split(" ")) {
+						if(!st.isEmpty()&& st!=" " && st!= "") {
+							arry.add(st.trim());
+						}
+					}
+					initLength = arry.size();
+					
+					if(maxLength<initLength) {
+						maxLength = initLength;
+					}
+//					System.out.println(line
+//							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3]);
+//					totalMsg = totalMsg + "@!" + line
+//							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3];
+				}
+
+			}
+			return maxLength;
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return maxLength;
+	}
+	public static String[] readJsonFile(File file, int maxLength) {
+
+		
+		String totalMsg = "";
+		String[] preStrAry = null;
+		String preStr = "";
+		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+			int lineAt = 0;
+			System.out.println("Exctract json");
+			for (String line; (line = br.readLine()) != null;) {
+				lineAt++;
+				if (line.contains("\"" + json_requirment_key + "\"")) {
+//					System.out.println(line.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length())
+//							.split("\"")[3]);
+					preStr = line
+							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3];
+					System.out.println(preStr);
+					preStrAry = new String[maxLength-1];
+					for(int j =0; j<maxLength-1; j++) {
+						if(j>preStr.split(" ").length-1) {
+							preStrAry[j] = "x";
+						}else {
+							if(!preStr.split(" ")[j].isEmpty()&&preStr.split(" ")[j]!=null) {
+								preStrAry[j] = preStr.split(" ")[j].replace("\\", "").replace("'", "").replace("'", "").replace("'", "").replace("'", "").replace(",", "");
+							}else{
+								preStrAry[j] = "x";
+							}
+//							preStrAry[j] = preStr.split(" ")[j];
+
+						}
+					}
+//					preStrAry = preStr.split(" ");
+//					for(int i = preStrAry.length-1; preStrAry.length<maxLength; i++) {
+//					}
+					String buildData = "";
+					for(String str: preStrAry) {
+						buildData = buildData + "," + str;
+					}
+					buildData = buildData.substring(1);
+					buildData = buildData.trim();
+					totalMsg = totalMsg + "@!" + buildData;
+//					totalMsg = totalMsg.substring(2);
+					totalMsg = totalMsg.trim();
+//					System.out.println(line
+//							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3]);
+//					totalMsg = totalMsg + "@!" + line
+//							.substring(line.indexOf("\"" + json_requirment_key + "\""), line.length()).split("\"")[3];
 				}
 
 			}
@@ -273,8 +421,6 @@ public class preprocessingApplication {
 			for (String line; (line = br.readLine()) != null;) {
 				lineAt++;
 				str.append(","+line);
-				System.out.println(line);
-
 			}
 			return str.toString();
 		} catch (FileNotFoundException e) {
