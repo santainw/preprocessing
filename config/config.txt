@@ -1,0 +1,14 @@
+# ---------- PATH ---------------
+PATH_RESOURCE_SOURCE=source/
+PATH_RESOURCE_RESULT=result/
+PATH_RESOURCE_POSITIVE=pos_neg/Lexicon-Positive.txt
+PATH_RESOURCE_NEGATIVE=pos_neg/Lexicon-Negative.txt
+PATH_RESOURCE_WORD=word/words.txt
+
+# ---------- RESULT ----------------
+RESULT_RELATION=Grocery_and_Gourmet_Food_5
+RESULT_ATTRIBRUTE_UNSUPERVISED=summary_review
+RESULT_ATTRIBRUTE_SUPERVISED=summary_review,emotional
+RESULT_POSITIVE_SUPERVISED=good,best,nice,great,yum,happy,okay,love,like,high,perfect,awesome
+RESULT_NEGATIVE_SUPERVISED=bad,not,but,no,not fresh,low
+RESULT_REQUIRMENT_KEY=reviewText
